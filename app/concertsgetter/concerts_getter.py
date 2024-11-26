@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 from transliterate import translit
 from app.models.common import Concert, Artist
 from datetime import datetime as dt
-import requests
 import json
 
 from typing import List
@@ -52,7 +51,8 @@ class ConcertsGetter:
 
             concerts: List[Concert] = list()
             all_concerts_divs = soup.findAll("div", class_="person-schedule-item person-schedule-list__item")
-            all_concerts_in_json = list(json.loads(soup.find("script", type="application/ld+json").string)["performerIn"])
+            all_concerts_in_json = list(
+                json.loads(soup.find("script", type="application/ld+json").string)["performerIn"])
         except Exception as e:
             logger.error(str(e))
             return []
@@ -96,41 +96,3 @@ class ConcertsGetter:
         async with aiohttp.ClientSession() as session:
             tasks = [self.find_concert_info(session, urls[i], self.artists[i]) for i in range(len(urls))]
             return await asyncio.gather(*tasks)
-
-
-a = Artist()
-a.name = "MAYOT"
-b = Artist()
-b.name = "GONE.Fludd"
-c = Artist()
-c.name = "шаман"
-obj = ConcertsGetter([a, b, c])
-ans = asyncio.run(obj.extract_concerts())
-for el in ans:
-    print(el)
-'''
-
-text_html = requests.get("https://afisha.yandex.ru/artist/gone-fludd?city=moscow")
-print(text_html.status_code)
-soup = BeautifulSoup(text_html.text, "html.parser")
-d = soup.find("script", type="application/ld+json").string
-d = json.loads(d)
-l = list(d["performerIn"])
-concerts = []
-art = Artist()
-art.name = "Gone"
-for el in l:
-    el = dict(el)
-    print(el)
-    try:
-        conc = Concert()
-        conc.artist = art
-        conc.price_start = int(el.get("offers").get("price"))
-        year, month, day = map(int, el.get("startDate").split("-"))
-        conc.place = el.get("location").get("name")
-
-        concerts.append(conc)
-    except:
-        continue
-
-print(concerts)'''
