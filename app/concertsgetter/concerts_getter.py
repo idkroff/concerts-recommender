@@ -84,7 +84,7 @@ class ConcertsGetter:
     async def make_url(artist: Artist):
         artist_translit = str(translit(artist.name, "ru", reversed=True))
         for i in range(len(artist_translit)):
-            if not artist_translit[i].isalpha():
+            if not artist_translit[i].isalnum():
                 artist_translit = artist_translit.replace(artist_translit[i], "-")
         artist_translit = artist_translit.lower()
 
