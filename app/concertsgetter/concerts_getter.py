@@ -31,11 +31,9 @@ class ConcertsGetter:
             except Exception as e:
                 logger.error(str(e))
 
-    async def get_time_for_concert(self, url: str):
+    @staticmethod
+    async def get_time_for_concert(url: str):
         text_html = await ConcertsGetter.extract_data_from_url(url)
-
-        if text_html == "":
-            return dt(0, 0, 0, 0, 0)
 
         soup = BeautifulSoup(text_html, "html.parser")
 
@@ -43,7 +41,8 @@ class ConcertsGetter:
 
         return hours, minutes
 
-    async def find_concert_info(self, url: str, artist: Artist):
+    @staticmethod
+    async def find_concert_info(url: str, artist: Artist):
         text_html = await ConcertsGetter.extract_data_from_url(url)
 
         try:
@@ -66,7 +65,7 @@ class ConcertsGetter:
 
                 year, month, day = map(int, concert_data.get("startDate").split("-"))
                 ref_for_date = concert_data["url"]
-                hours, minutes = await self.get_time_for_concert(ref_for_date)
+                hours, minutes = await ConcertsGetter.get_time_for_concert(ref_for_date)
                 concert_info.datetime = dt(year, month, day, hours, minutes)
 
                 concert_info.city = all_concerts_divs[i].find("div", class_="person-schedule-place__city").text
@@ -81,17 +80,21 @@ class ConcertsGetter:
 
     @staticmethod
     async def make_url(artist: Artist):
-        artist_translit = str(translit(artist.name, "ru", reversed=True))
-        for i in range(len(artist_translit)):
-            if not artist_translit[i].isalnum():
-                artist_translit = artist_translit.replace(artist_translit[i], "-")
-        artist_translit = artist_translit.lower()
+        try:
+            artist_translit = str(translit(artist.name, "ru", reversed=True))
+            for i in range(len(artist_translit)):
+                if not artist_translit[i].isalnum():
+                    artist_translit = artist_translit.replace(artist_translit[i], "-")
+            artist_translit = artist_translit.lower()
 
-        return f"https://afisha.yandex.ru/artist/{artist_translit}?city=moscow"
+            return f"https://afisha.yandex.ru/artist/{artist_translit}?city=moscow"
+        except Exception as e:
+            logger.error(str(e))
 
     async def extract_concerts(self):
         tasks = [ConcertsGetter.make_url(artist) for artist in self.artists]
         urls = await asyncio.gather(*tasks)
+        urls = [url for url in urls if url is not None]
 
-        tasks = [self.find_concert_info(urls[i], self.artists[i]) for i in range(len(urls))]
+        tasks = [ConcertsGetter.find_concert_info(urls[i], self.artists[i]) for i in range(len(urls))]
         return await asyncio.gather(*tasks)
