@@ -1,5 +1,6 @@
 import logging
 from yandex_music import Client
+from yandex_music.exceptions import NotFoundError
 from typing import Set
 from json import loads
 
@@ -47,7 +48,7 @@ class ArtistsGetter:
 
         print('\n'.join(text))
 
-    def get_artists_from_playlist_by_url(self, playlist_url: str) -> list:
+    def get_artists_from_playlist_by_url(self, playlist_url: str) -> list | str:
         """
         Метод, принимающий ссылку на плейлист и позвращающий список обнаруженных исполнителей
         """
@@ -58,12 +59,15 @@ class ArtistsGetter:
 
         found_artists: Set[str] = set()
         
-        response = self.client.users_playlists(kind=playlist_id, user_id=user_id)
-        for track in response.fetch_tracks():
-            for artist in track.track.artists:
-                found_artists.add(artist.name)
+        try:
+            response = self.client.users_playlists(kind=playlist_id, user_id=user_id)
+            for track in response.fetch_tracks():
+                for artist in track.track.artists:
+                    found_artists.add(artist.name)
 
-        return list(found_artists)
+            return list(found_artists)
+        except NotFoundError as e:
+            return f"Трек пользователя {user_id} с идентификатором {playlist_id} не найден или не является публичным"
 
 
 
