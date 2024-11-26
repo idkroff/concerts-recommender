@@ -10,8 +10,10 @@ def main():
     b.name = "GONE.Fludd"
     c = Artist()
     c.name = "шаман"
+    d = Artist()
+    d.name = "Friendly Thug 52 NGG"
 
-    obj = ConcertsGetter([a, b, c])
+    obj = ConcertsGetter([a, b, c, d])
     ans = asyncio.run(obj.extract_concerts())
     for el in ans:
         print(el)
