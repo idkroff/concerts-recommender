@@ -23,13 +23,12 @@ class ConcertsGetter:
             try:
                 async with session.get(url) as response:
                     if response.status != 200:
-                        raise Exception(f"Not OK request: url = {url}, status = {response.status}, att = {i}")
+                        raise Exception(f"Not OK request: url = {url}, status = {response.status}, att = {i + 1}")
                     text = await response.text()
                     logger.debug(f"Successful request: url = {url}")
                     return text
             except Exception as e:
                 logger.error(str(e))
-                continue
 
     async def get_time_for_concert(self, session, url: str):
         text_html = await ConcertsGetter.extract_data_from_url(session, url)
@@ -77,7 +76,6 @@ class ConcertsGetter:
             except Exception as e:
                 logger.warning(str(e))
                 logger.warning(f"Can't get info about a {artist.name}'s concert")
-                continue
         return concerts
 
     @staticmethod
