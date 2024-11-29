@@ -7,7 +7,7 @@ from datetime import datetime as dt
 import json
 import os
 
-from typing import List
+from typing import List, Dict
 
 import logging
 
@@ -50,7 +50,7 @@ class ConcertsGetter:
             soup = BeautifulSoup(text_html, "html.parser")
 
             concerts: List[Concert] = list()
-            all_concerts_divs = soup.findAll("div", class_="person-schedule-item person-schedule-list__item")
+            all_concerts_divs = soup.findAll("div", class_="person-schedule-item")
             all_concerts_in_json = list(
                 json.loads(soup.find("script", type="application/ld+json").string)["performerIn"])
         except Exception as e:
@@ -74,7 +74,7 @@ class ConcertsGetter:
                 concert_info.price_start = int(concert_data["offers"]["price"])
 
                 concerts.append(concert_info)
-            except Exception as e:
+            except Exception:
                 logger.warning(f"Can't get info about a {artist.name}'s concert")
         return concerts
 
@@ -86,15 +86,32 @@ class ConcertsGetter:
                 if not artist_translit[i].isalnum():
                     artist_translit = artist_translit.replace(artist_translit[i], "-")
             artist_translit = artist_translit.lower()
-
-            return f"https://afisha.yandex.ru/artist/{artist_translit}?city=moscow"
+            artist_translit2 = artist_translit.replace('j', 'i')
+            artist_translit3 = artist_translit.replace('i', 'j')
+            return list({f"https://afisha.yandex.ru/artist/{artist_translit}?city=moscow",
+                         f"https://afisha.yandex.ru/artist/{artist_translit2}?city=moscow",
+                         f"https://afisha.yandex.ru/artist/{artist_translit3}?city=moscow"})
         except Exception as e:
             logger.error(str(e))
 
     async def extract_concerts(self):
         tasks = [ConcertsGetter.make_url(artist) for artist in self.artists]
-        urls = await asyncio.gather(*tasks)
-        urls = [url for url in urls if url is not None]
+        temp_urls = await asyncio.gather(*tasks)
+        urls: List[tuple] = list()
+        for i in range(len(temp_urls)):
+            for url in temp_urls[i]:
+                if url is not None:
+                    urls.append((url, i))
 
-        tasks = [self.find_concert_info(urls[i], self.artists[i]) for i in range(len(urls))]
-        return await asyncio.gather(*tasks)
+        tasks = [self.find_concert_info(urls[i][0], self.artists[urls[i][1]]) for i in range(len(urls))]
+        results = await asyncio.gather(*tasks)
+
+        concerts_dict: Dict = dict()
+        for artist in self.artists:
+            concerts_dict[artist.name] = []
+
+        for res in results:
+            for el in res:
+                concerts_dict[el.artist.name].append(el)
+
+        return concerts_dict
