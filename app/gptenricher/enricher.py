@@ -60,12 +60,22 @@ class GPTEnricher:
 
         logger.debug(f"[enrich] executing request: {request}")
 
-        return result[0].text
+        output = result[0].text
+        output = self.render_emoji(output)
+
+        return output
+
+    def render_emoji(self, text: str) -> str:
+        text = text.replace("[music_icon]", "🎶")
+        text = text.replace("[date_icon]", "📅")
+        text = text.replace("[ticket_icon]", "🔖")
+        text = text.replace("[place_icon]", "📍")
+        return text
 
     def load_json(self, path: Path):
         module_path = Path(__file__).parent
         file_path = module_path / path
 
-        with file_path.open('r', encoding='utf-8') as file:
+        with file_path.open("r", encoding="utf-8") as file:
             data = json.load(file)
         return data
