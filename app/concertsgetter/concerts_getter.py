@@ -5,8 +5,9 @@ from transliterate import translit
 from app.models.common import Concert, Artist
 from datetime import datetime as dt
 import json
+import os
 
-from typing import List
+from typing import List, Dict
 
 import logging
 
@@ -16,24 +17,25 @@ logger = logging.getLogger(__name__)
 class ConcertsGetter:
     def __init__(self, artists: List[Artist]):
         self.artists: List[Artist] = artists
+        self.scraper_api_token = os.getenv("SCRAPER_API_TOKEN")
+        if self.scraper_api_token is None:
+            raise Exception("token not found in env SCRAPER_API_TOKEN")
 
-    @staticmethod
-    async def extract_data_from_url(url: str):
-        for i in range(5):
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(url) as response:
-                        if response.status != 200:
-                            raise Exception(f"Not OK request: url = {url}, status = {response.status}, att = {i + 1}")
-                        text = await response.text()
-                        logger.debug(f"Successful request: url = {url}")
-                        return text
-            except Exception as e:
-                logger.error(str(e))
+    async def extract_data_from_url(self, url: str):
+        try:
+            scraper_url = f"http://api.scraperapi.com?api_key={self.scraper_api_token}&url={url}"
+            async with aiohttp.ClientSession() as session:
+                async with session.get(scraper_url) as response:
+                    if response.status != 200:
+                        raise Exception(f"Not OK request: url = {url}, status = {response.status}")
+                    text = await response.text()
+                    logger.debug(f"Successful request: url = {url}")
+                    return text
+        except Exception as e:
+            logger.error(str(e))
 
-    @staticmethod
-    async def get_time_for_concert(url: str):
-        text_html = await ConcertsGetter.extract_data_from_url(url)
+    async def get_time_for_concert(self, url: str):
+        text_html = await self.extract_data_from_url(url)
 
         soup = BeautifulSoup(text_html, "html.parser")
 
@@ -41,15 +43,14 @@ class ConcertsGetter:
 
         return hours, minutes
 
-    @staticmethod
-    async def find_concert_info(url: str, artist: Artist):
-        text_html = await ConcertsGetter.extract_data_from_url(url)
+    async def find_concert_info(self, url: str, artist: Artist):
+        text_html = await self.extract_data_from_url(url)
 
         try:
             soup = BeautifulSoup(text_html, "html.parser")
 
             concerts: List[Concert] = list()
-            all_concerts_divs = soup.findAll("div", class_="person-schedule-item person-schedule-list__item")
+            all_concerts_divs = soup.findAll("div", class_="person-schedule-item")
             all_concerts_in_json = list(
                 json.loads(soup.find("script", type="application/ld+json").string)["performerIn"])
         except Exception as e:
@@ -65,7 +66,7 @@ class ConcertsGetter:
 
                 year, month, day = map(int, concert_data.get("startDate").split("-"))
                 ref_for_date = concert_data["url"]
-                hours, minutes = await ConcertsGetter.get_time_for_concert(ref_for_date)
+                hours, minutes = await self.get_time_for_concert(ref_for_date)
                 concert_info.datetime = dt(year, month, day, hours, minutes)
 
                 concert_info.city = all_concerts_divs[i].find("div", class_="person-schedule-place__city").text
@@ -73,8 +74,7 @@ class ConcertsGetter:
                 concert_info.price_start = int(concert_data["offers"]["price"])
 
                 concerts.append(concert_info)
-            except Exception as e:
-                logger.warning(str(e))
+            except Exception:
                 logger.warning(f"Can't get info about a {artist.name}'s concert")
         return concerts
 
@@ -86,15 +86,32 @@ class ConcertsGetter:
                 if not artist_translit[i].isalnum():
                     artist_translit = artist_translit.replace(artist_translit[i], "-")
             artist_translit = artist_translit.lower()
-
-            return f"https://afisha.yandex.ru/artist/{artist_translit}?city=moscow"
+            artist_translit2 = artist_translit.replace('j', 'i')
+            artist_translit3 = artist_translit.replace('i', 'j')
+            return list({f"https://afisha.yandex.ru/artist/{artist_translit}?city=moscow",
+                         f"https://afisha.yandex.ru/artist/{artist_translit2}?city=moscow",
+                         f"https://afisha.yandex.ru/artist/{artist_translit3}?city=moscow"})
         except Exception as e:
             logger.error(str(e))
 
     async def extract_concerts(self):
         tasks = [ConcertsGetter.make_url(artist) for artist in self.artists]
-        urls = await asyncio.gather(*tasks)
-        urls = [url for url in urls if url is not None]
+        temp_urls = await asyncio.gather(*tasks)
+        urls: List[tuple] = list()
+        for i in range(len(temp_urls)):
+            for url in temp_urls[i]:
+                if url is not None:
+                    urls.append((url, i))
 
-        tasks = [ConcertsGetter.find_concert_info(urls[i], self.artists[i]) for i in range(len(urls))]
-        return await asyncio.gather(*tasks)
+        tasks = [self.find_concert_info(urls[i][0], self.artists[urls[i][1]]) for i in range(len(urls))]
+        results = await asyncio.gather(*tasks)
+
+        concerts_dict: Dict = dict()
+        for artist in self.artists:
+            concerts_dict[artist.name] = []
+
+        for res in results:
+            for el in res:
+                concerts_dict[el.artist.name].append(el)
+
+        return concerts_dict
