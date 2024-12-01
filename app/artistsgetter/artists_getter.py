@@ -1,35 +1,10 @@
-import logging
+from dataclasses import dataclass, field
+from datetime import datetime as dt
+from dataclasses import asdict
 from yandex_music import Client
 from yandex_music.exceptions import NotFoundError
-from typing import Set
-from json import loads
 
-
-logger = logging.getLogger(__name__)
-
-
-class Artist:
-    """
-    Класс артиста из плейлиста
-    """
-    def __init__(self, name: str, distibution: float) -> None:
-        """
-        Конструктор класса артиста: инициализирует объект по имени и процентному соотношению 
-        """
-        self.name = name
-        self.distibution = distibution
-
-    def __str__(self) -> str:
-        """
-        Строковое представление артиста
-        """
-        return f"Артист {self.name} с частотой упоминания {self.distibution}"
-    
-    def __eq__(self, other) -> bool:
-        """
-        Компанатор для артистов
-        """
-        return self.name == other.name and abs(self.distibution - other.distibution) <= 0.02
+from app.models.common import Artist
 
 
 class ArtistsGetter:
@@ -104,7 +79,7 @@ class ArtistsGetter:
                     )
                 )
 
-            return sorted(result_artists_list, key=lambda x: (-x.distibution, x.name))
+            return sorted(result_artists_list, key=lambda x: (-x.distribution, x.name))
         
         except NotFoundError as e:
             return f"Плейлист пользователя {user_id} с идентификатором {playlist_id} не найден или не является публичным"

@@ -1,11 +1,29 @@
 from dataclasses import dataclass, field
 from datetime import datetime as dt
 from dataclasses import asdict
+from yandex_music import Client
+from yandex_music.exceptions import NotFoundError
 
 
 @dataclass
 class Artist:
+    """
+    Класс артиста 
+    """
     name: str = ""
+    distribution: float = 0.0
+
+    def __str__(self) -> str:
+        """
+        Строковое представление артиста
+        """
+        return f"Артист {self.name} с частотой упоминания {self.distribution}"
+    
+    def __eq__(self, other) -> bool:
+        """
+        Компанатор для артистов
+        """
+        return self.name == other.name and abs(self.distribution - other.distribution) <= 0.02
 
 
 @dataclass

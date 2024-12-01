@@ -1,8 +1,8 @@
 import logging
 import os
-import unittest
-from unittest.mock import patch, MagicMock
-from artists_getter import ArtistsGetter, Artist
+
+from artists_getter import ArtistsGetter
+from app.models.common import Artist
 
 
 logger = logging.getLogger(__name__)
@@ -27,7 +27,6 @@ def test_get_artists_from_playlist():
             assert artists[i] == expected_return_list[i]
     except Exception as e:
         print(e)
-
 
 
 if __name__ == '__main__':
