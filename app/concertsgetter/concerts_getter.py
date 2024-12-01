@@ -7,7 +7,7 @@ from datetime import datetime as dt
 import json
 import os
 
-from typing import List, Dict
+from typing import List
 
 import logging
 
@@ -17,13 +17,18 @@ logger = logging.getLogger(__name__)
 class ConcertsGetter:
     def __init__(self, artists: List[Artist]):
         self.artists: List[Artist] = artists
-        self.scraper_api_token = os.getenv("SCRAPER_API_TOKEN")
-        if self.scraper_api_token is None:
+
+        self.__scraper_api_token = os.getenv("SCRAPER_API_TOKEN")
+        if self.__scraper_api_token is None:
             raise Exception("token not found in env SCRAPER_API_TOKEN")
+
+        self.__q_all_concerts = os.getenv("CONCERTS_GETTER_MAX_CONCERTS_ALL")
+        if not (self.__q_all_concerts is None):
+            self.__q_all_concerts = int(self.__q_all_concerts)
 
     async def extract_data_from_url(self, url: str):
         try:
-            scraper_url = f"http://api.scraperapi.com?api_key={self.scraper_api_token}&url={url}"
+            scraper_url = f"http://api.scraperapi.com?api_key={self.__scraper_api_token}&url={url}"
             async with aiohttp.ClientSession() as session:
                 async with session.get(scraper_url) as response:
                     if response.status != 200:
@@ -57,7 +62,11 @@ class ConcertsGetter:
             logger.error(str(e))
             return []
 
-        for i in range(min(len(all_concerts_in_json), len(all_concerts_divs))):
+        for i in range(min(len(all_concerts_in_json), len(all_concerts_divs), min(int(artist.distribution * 10), 4))):
+            if not (self.__q_all_concerts is None):
+                if self.__q_all_concerts <= 0:
+                    break
+
             concert_data = all_concerts_in_json[i]
             try:
                 concert_info = Concert()
@@ -74,6 +83,7 @@ class ConcertsGetter:
                 concert_info.price_start = int(concert_data["offers"]["price"])
 
                 concerts.append(concert_info)
+                self.__q_all_concerts -= 1
             except Exception:
                 logger.warning(f"Can't get info about a {artist.name}'s concert")
         return concerts
@@ -106,12 +116,11 @@ class ConcertsGetter:
         tasks = [self.find_concert_info(urls[i][0], self.artists[urls[i][1]]) for i in range(len(urls))]
         results = await asyncio.gather(*tasks)
 
-        concerts_dict: Dict = dict()
-        for artist in self.artists:
-            concerts_dict[artist.name] = []
-
+        concerts_list: List = list()
         for res in results:
             for el in res:
-                concerts_dict[el.artist.name].append(el)
+                concerts_list.append(el)
 
-        return concerts_dict
+        concerts_list.sort(key=lambda x: x.artist.distribution, reverse=True)
+
+        return concerts_list
