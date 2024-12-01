@@ -1,79 +1,104 @@
 import logging
+import os
+import re
 
-from aiogram import *
+from aiogram import Bot, Dispatcher
 from aiogram.types import Message
-from aiogram.fsm.storage.memory import MemoryStorage
-from aiogram.dispatcher.dispatcher import Dispatcher
-
+from aiogram.filters import Command
+import asyncio
 
 from app.artistsgetter.artists_getter import ArtistsGetter
-# from app.concerts_getter.concerts_getter import get_concerts
+from app.concertsgetter.concerts_getter import *
 from app.gptenricher.enricher import GPTEnricher
 
-API_TOKEN = "8085801358:AAHQBk89mSGY1hlRwXZXaw-Xy0qrosSlXcw"
+TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 
 logging.basicConfig(level=logging.INFO)
 
+if not TG_BOT_TOKEN:
+    raise ValueError("TG_BOT_TOKEN не задан!")
 
-class TelegramClient:
-    def __init__(self):
-        self.bot = Bot(token=API_TOKEN)
-        self.dp = Dispatcher(self.bot)
+bot = Bot(token=TG_BOT_TOKEN)
 
-        self.dp.register_message_handler(self.greet_user, commands=["start"])
-        self.dp.register_message_handler(
-            self.process_playlist_link, content_types=["text"])
+dp = Dispatcher()
 
-    async def greet_user(self, message: Message):
+
+@dp.message(Command("start"))
+async def greet_user(message: Message):
+    """
+    Приветствие пользователя при вводе команды /start.
+    """
+    await message.reply(
+        "Привет! Я бот, который поможет тебе найти ближайшие концерты исполнителей из твоего плейлиста 🎶\n"
+        "Просто отправь мне ссылку на плейлист!\n"
+        "Можешь также указать свои пожелания!"
+    )
+
+
+@dp.message()
+async def process_playlist_link(message: Message):
+    """
+    Обработка текстовых сообщений, содержащих ссылку на плейлист.
+    """
+
+    link = None
+    user_input = message.text.strip()
+
+    match = re.search(r'(https?://music\.yandex\.ru/.*)', user_input)
+
+    if match:
+        link = match.group(1)
+        user_input = user_input.replace(link, "").strip()
+
+    if "music.yandex.ru" not in link:
         await message.reply(
-            "Привет! Я бот, который поможет тебе найти ближайшие концерты исполнителей из твоего плейлиста 🎶\n"
-            "Просто отправь мне ссылку на плейлист!"
+            "Ой! 😬 Похоже, что с твоей ссылкой что-то не так. Убедись, что это действительная ссылка на плейлист и попробуй снова."
         )
+        return
 
-    async def process_playlist_link(self, message: Message):
-        link = message.text.strip()
-        if "music.yandex.ru" not in link:
+    await message.reply("Получено! 📝 Просматриваем твой плейлист...")
+
+    try:
+        ag = ArtistsGetter(os.getenv("YANDEX_MUSIC_TOKEN"))
+        artists = ag.get_artists_from_playlist_by_url(
+            playlist_url=link)
+
+        if not artists:
             await message.reply(
-                "Ой! 😬 Похоже, что с твоей ссылкой что-то не так. Убедись, что это действительная ссылка на плейлист и попробуй снова."
+                "К сожалению, я не нашёл ни одного исполнителя в твоём плейлисте. 😔 Попробуй отправить ссылку на другой плейлист."
             )
             return
 
-        await message.reply("Получено! 📝 Просматриваем твой плейлист...")
+        await message.reply("Ищу концерты исполнителей из твоего плейлиста... 🎤")
 
-        try:
-            artists = get_artists(link)
-            if not artists:
-                await message.reply(
-                    "К сожалению, я не нашёл ни одного исполнителя в твоём плейлисте. 😔 Попробуй отправить ссылку на другой плейлист."
-                )
-                return
+        obj = ConcertsGetter(artists)
+        concerts = await obj.extract_concerts()
 
-            await message.reply("Ищу концерты исполнителей из твоего плейлиста... 🎤")
+        if concerts:
+            distribution = {
+                artist.name: artist.distribution for artist in artists}
 
-            concerts = get_concerts(artists)
-            enriched_response = enrich_concerts(
-                concerts, user_input=message.text)
+            enricher = GPTEnricher()
+            # user_input = "Список концертов из моего плейлиста"
+            enriched_output = enricher.enrich(
+                user_input=user_input,
+                concerts=concerts,
+                distribution=distribution
+            )
+            await message.reply("Вот что мы нашли:\n\n" + enriched_output)
+        else:
+            await message.reply("К сожалению, я не нашёл концертов для исполнителей из плейлиста. 😔")
 
-            if not enriched_response:
-                await message.reply(
-                    "К сожалению, я не нашёл ни одного концерта для исполнителей из твоего плейлиста. 😔 Попробуй отправить ссылку на другой плейлист."
-                )
-                return
+    except Exception as e:
+        logging.error(f"Error processing playlist link: {e}")
+        await message.reply("Произошла ошибка при обработке твоего плейлиста. Попробуй ещё раз позже.")
 
-            reply = "Я нашёл несколько концертов, которые могут тебя заинтересовать! Вот список:\n"
-            for artist, concert_list in enriched_response.items():
-                for concert in concert_list:
-                    reply += (
-                        f"🎶 {artist}\n"
-                        f"📅 Дата: {concert['date']}\n"
-                        f"📍 Место: {concert['location']}\n\n"
-                    )
 
-            await message.reply(reply)
-
-        except Exception as e:
-            logging.error(f"Error processing playlist link: {e}")
-            await message.reply("Произошла ошибка при обработке твоего плейлиста. Попробуй ещё раз позже.")
-
-    def serve(self):
-        executor.start_polling(self.dp, skip_updates=True)
+async def main():
+    """
+    Основная функция для запуска диспетчера.
+    """
+    try:
+        await dp.start_polling(bot)
+    except Exception as e:
+        logging.error(f"Ошибка запуска бота: {e}")

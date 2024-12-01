@@ -1,5 +1,6 @@
-from app.tg_client.tg_client import TelegramClient
+import asyncio
+from app.tg_client.tg_client import main
+
 
 if __name__ == "__main__":
-    client = TelegramClient()
-    client.serve()
+    asyncio.run(main())
