@@ -62,9 +62,8 @@ class ConcertsGetter:
             logger.error(str(e))
             return []
 
-        q_concerts_for_each_artist = 0
         for i in range(min(len(all_concerts_in_json), len(all_concerts_divs))):
-            if q_concerts_for_each_artist >= min(int(artist.distribution * 10), 4):
+            if len(concerts) >= min(int(artist.distribution * 10), 4):
                 break
             if not (self.__q_all_concerts is None):
                 if self.__q_all_concerts <= 0:
@@ -88,7 +87,6 @@ class ConcertsGetter:
                 concerts.append(concert_info)
                 if not (self.__q_all_concerts is None):
                     self.__q_all_concerts -= 1
-                q_concerts_for_each_artist += 1
             except Exception:
                 logger.warning(f"Can't get info about a {artist.name}'s concert")
         return concerts
@@ -101,19 +99,22 @@ class ConcertsGetter:
                 if not artist_translit[i].isalnum():
                     artist_translit = artist_translit.replace(artist_translit[i], "-")
             artist_translit = artist_translit.lower()
-            artist_translit2 = artist_translit.replace("j", "i")
-            artist_translit3 = artist_translit.replace("i", "j")
-            artist_translit4 = artist_translit
-            for i in range(len(artist_translit4)):
-                if artist_translit4[i] == "j":
-                    artist_translit4 = artist_translit4[:i] + "i" + artist_translit4[i + 1:]
-                elif artist_translit4[i] == "i":
-                    artist_translit4 = artist_translit4[:i] + "j" + artist_translit4[i + 1:]
 
-            return list({f"https://afisha.yandex.ru/artist/{artist_translit}?city=moscow",
-                         f"https://afisha.yandex.ru/artist/{artist_translit2}?city=moscow",
-                         f"https://afisha.yandex.ru/artist/{artist_translit3}?city=moscow",
-                         f"https://afisha.yandex.ru/artist/{artist_translit4}?city=moscow"})
+            artist_translit_variants: List[str] = list()
+            artist_translit_variants.append(artist_translit)
+            artist_translit_variants.append(artist_translit.replace("j", "i"))
+            artist_translit_variants.append(artist_translit.replace("i", "j"))
+            artist_translit_temp = artist_translit
+            for i in range(len(artist_translit)):
+                if artist_translit_temp[i] == "j":
+                    artist_translit_temp = artist_translit_temp[:i] + "i" + artist_translit_temp[i + 1:]
+                elif artist_translit_temp[i] == "i":
+                    artist_translit_temp = artist_translit_temp[:i] + "j" + artist_translit_temp[i + 1:]
+            artist_translit_variants.append(artist_translit_temp)
+
+            artist_urls_variants: List[str] = [f"https://afisha.yandex.ru/artist/{artist_translit}?city=moscow" for
+                                               artist_translit in artist_translit_variants]
+            return list(set(artist_urls_variants))
         except Exception as e:
             logger.error(str(e))
 

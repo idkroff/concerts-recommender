@@ -2,9 +2,16 @@ import asyncio
 
 from app.concertsgetter.concerts_getter import ConcertsGetter
 from app.models.common import Artist
+from app.logger import setup_logger
+
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def main():
+    setup_logger(logging.DEBUG)
+
     names = ["MAYOT", "GONE.Fludd", "Шаман", "Люся Чеботина"]
     artists = [Artist(names[i], (i + 1) / 10) for i in range(len(names))]
 
