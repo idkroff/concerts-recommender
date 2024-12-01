@@ -79,6 +79,8 @@ class ConcertsGetter:
                 ref_for_date = concert_data["url"]
                 hours, minutes = await self.get_time_for_concert(ref_for_date)
                 concert_info.datetime = dt(year, month, day, hours, minutes)
+                if concert_info.datetime < dt.now():
+                    continue
 
                 concert_info.city = all_concerts_divs[i].find("div", class_="person-schedule-place__city").text
                 concert_info.place = concert_data["location"]["name"]
