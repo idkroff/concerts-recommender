@@ -1,6 +1,3 @@
-from dataclasses import dataclass, field
-from datetime import datetime as dt
-from dataclasses import asdict
 from yandex_music import Client
 from yandex_music.exceptions import NotFoundError
 
@@ -8,13 +5,7 @@ from app.models.common import Artist
 
 
 class ArtistsGetter:
-    """
-    Основной класс модуля
-    """
     def __init__(self, token) -> None:
-        """
-        Конструктор класса: инициализирует объект клиента API через токен
-        """
         self.client: Client = Client(token)
         self.client.init()
 
@@ -29,7 +20,8 @@ class ArtistsGetter:
             track, chart = track_short.track, track_short.chart
             artists = ''
             if track.artists:
-                artists = ' - ' + ', '.join(artist.name for artist in track.artists)
+                artists = ' - ' + \
+                    ', '.join(artist.name for artist in track.artists)
 
             track_text = f'{track.title}{artists}'
 
@@ -60,9 +52,10 @@ class ArtistsGetter:
 
         # Padding for cases when more than one artist on a track
         track_count_padding = 0
-        
-        try: 
-            response_tracks = self.client.users_playlists(kind=playlist_id, user_id=user_id).fetch_tracks()
+
+        try:
+            response_tracks = self.client.users_playlists(
+                kind=playlist_id, user_id=user_id).fetch_tracks()
             for track in response_tracks:
                 track_count_padding += -1 + len(track.track.artists)
 
@@ -72,14 +65,15 @@ class ArtistsGetter:
                     else:
                         found_artists[artist.name] = 1
 
-            for artist_name, artist_distibution in found_artists.items():
+            for artist_name, artist_distribution in found_artists.items():
                 result_artists_list.append(Artist(
-                        name = artist_name,
-                        distibution = round(artist_distibution / (len(response_tracks) + track_count_padding), 2)
-                    )
+                    name=artist_name,
+                    distribution=round(
+                        artist_distribution / (len(response_tracks) + track_count_padding), 2)
+                )
                 )
 
             return sorted(result_artists_list, key=lambda x: (-x.distribution, x.name))
-        
+
         except NotFoundError as e:
             return f"Плейлист пользователя {user_id} с идентификатором {playlist_id} не найден или не является публичным"
