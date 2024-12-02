@@ -5,11 +5,11 @@ import re
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message
 from aiogram.filters import Command
-import asyncio
 
 from app.artistsgetter.artists_getter import ArtistsGetter
 from app.concertsgetter.concerts_getter import *
 from app.gptenricher.enricher import GPTEnricher
+from app.context import set_request_id
 
 TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
 
@@ -40,7 +40,7 @@ async def process_playlist_link(message: Message):
     """
     Обработка текстовых сообщений, содержащих ссылку на плейлист.
     """
-
+    set_request_id(str(message.message_id))
     link = None
     user_input = message.text.strip()
 
@@ -50,48 +50,46 @@ async def process_playlist_link(message: Message):
         link = match.group(1)
         user_input = user_input.replace(link, "").strip()
 
-    if "music.yandex.ru" not in link:
+    if not link or "music.yandex.ru" not in link:
         await message.reply(
             "Ой! 😬 Похоже, что с твоей ссылкой что-то не так. Убедись, что это действительная ссылка на плейлист и попробуй снова."
         )
         return
 
-    await message.reply("Получено! 📝 Просматриваем твой плейлист...")
+    status_message = await message.reply("Получено! 📝 Просматриваем твой плейлист...")
 
     try:
         ag = ArtistsGetter(os.getenv("YANDEX_MUSIC_TOKEN"))
-        artists = ag.get_artists_from_playlist_by_url(
-            playlist_url=link)
+        artists = ag.get_artists_from_playlist_by_url(playlist_url=link)
 
         if not artists:
-            await message.reply(
+            await status_message.edit_text(
                 "К сожалению, я не нашёл ни одного исполнителя в твоём плейлисте. 😔 Попробуй отправить ссылку на другой плейлист."
             )
             return
 
-        await message.reply("Ищу концерты исполнителей из твоего плейлиста... 🎤")
+        await status_message.edit_text("Ищу концерты исполнителей из твоего плейлиста... 🎤")
 
         obj = ConcertsGetter(artists)
         concerts = await obj.extract_concerts()
 
         if concerts:
+            await status_message.edit_text("Ищу подходящие для тебя варианты... 🔍")
             distribution = {
                 artist.name: artist.distribution for artist in artists}
 
             enricher = GPTEnricher()
-            # user_input = "Список концертов из моего плейлиста"
             enriched_output = enricher.enrich(
                 user_input=user_input,
                 concerts=concerts,
                 distribution=distribution
             )
-            await message.reply("Вот что мы нашли:\n\n" + enriched_output)
+            await status_message.edit_text("Вот что мы нашли:\n\n" + enriched_output)
         else:
-            await message.reply("К сожалению, я не нашёл концертов для исполнителей из плейлиста. 😔")
-
+            await status_message.edit_text("К сожалению, я не нашёл концертов для исполнителей из плейлиста. 😔")
     except Exception as e:
         logging.error(f"Error processing playlist link: {e}")
-        await message.reply("Произошла ошибка при обработке твоего плейлиста. Попробуй ещё раз позже.")
+        await status_message.edit_text("Произошла ошибка при обработке твоего плейлиста. Попробуй ещё раз позже.")
 
 
 async def main():
