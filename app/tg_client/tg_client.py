@@ -1,4 +1,3 @@
-import logging
 import os
 import re
 
@@ -11,14 +10,8 @@ from app.concertsgetter.concerts_getter import *
 from app.gptenricher.enricher import GPTEnricher
 from app.context import set_request_id
 
-TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
-
-logging.basicConfig(level=logging.INFO)
-
-if not TG_BOT_TOKEN:
-    raise ValueError("TG_BOT_TOKEN не задан!")
-
-bot = Bot(token=TG_BOT_TOKEN)
+import logging
+logger = logging.getLogger(__name__)
 
 dp = Dispatcher()
 
@@ -33,6 +26,18 @@ async def greet_user(message: Message):
         "Просто отправь мне ссылку на плейлист!\n"
         "Можешь также указать свои пожелания!"
     )
+
+
+@dp.message(Command("reqid"))
+async def handle_reqid_command(message: Message):
+    """
+    Возвращает message_id сообщения, на которое сделан реплай.
+    """
+    if message.reply_to_message:
+        reply_message_id = message.reply_to_message.message_id
+        await message.reply(f"ID сообщения, на которое вы ответили: {reply_message_id}")
+    else:
+        await message.reply("Эта команда должна быть выполнена в ответ на сообщение.")
 
 
 @dp.message()
@@ -92,11 +97,17 @@ async def process_playlist_link(message: Message):
         await status_message.edit_text("Произошла ошибка при обработке твоего плейлиста. Попробуй ещё раз позже.")
 
 
-async def main():
-    """
-    Основная функция для запуска диспетчера.
-    """
-    try:
-        await dp.start_polling(bot)
-    except Exception as e:
-        logging.error(f"Ошибка запуска бота: {e}")
+class TGClient:
+    def __init__(self):
+        TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
+
+        if not TG_BOT_TOKEN:
+            raise ValueError("TG_BOT_TOKEN не задан!")
+
+        self.bot = Bot(token=TG_BOT_TOKEN)
+
+    async def start(self):
+        try:
+            await dp.start_polling(self.bot)
+        except Exception as e:
+            logging.error(f"Ошибка запуска бота: {e}")

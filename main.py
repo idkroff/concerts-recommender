@@ -1,6 +1,11 @@
 import asyncio
-from app.tg_client.tg_client import main
+import logging
+from app.tg_client.tg_client import TGClient
+from app.logger import setup_logger
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    setup_logger(level=logging.DEBUG)
+
+    client = TGClient()
+    asyncio.run(client.start())

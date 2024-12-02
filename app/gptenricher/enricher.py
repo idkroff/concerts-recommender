@@ -50,7 +50,7 @@ class GPTEnricher:
         request = {
             "concerts": concerts_dicts,
             "artists_distribution": distribution,
-            "user_request": user_input
+            "user_request": user_input.strip()
         }
 
         result = self.model.run([
