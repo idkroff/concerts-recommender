@@ -40,5 +40,5 @@ jobs:
         run: |
           ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }}  << 'EOF'
             cd ${{ env.DEPLOY_DIRECTORY }}
-            "sudo ${{ env.DEPLOY_DIRECTORY }}/run-service.sh"
+            sudo ./run-service.sh
           EOF
