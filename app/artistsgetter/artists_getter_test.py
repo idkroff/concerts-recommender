@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 
 def test_get_artists_from_playlist():
-    ag = ArtistsGetter(os.getenv("YANDEX_MUSIC_TOKEN"))
+    ag = ArtistsGetter()
     artists = ag.get_artists_from_playlist_by_url(
         playlist_url="https://music.yandex.ru/users/fnikulenko/playlists/1007")
 
