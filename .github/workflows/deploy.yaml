@@ -6,6 +6,7 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment: production
     env:
       HOST: ${{ vars.DEPLOY_SSH_HOST }}
       DEPLOY_DIRECTORY: ${{ vars.DEPLOY_DIRECTORY }}
