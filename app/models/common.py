@@ -14,6 +14,11 @@ class Artist:
     def __eq__(self, other) -> bool:
         return self.name == other.name and abs(self.distribution - other.distribution) <= 0.02
 
+    def to_dict(self):
+        return {
+            "name": self.name,
+        }
+
 
 @dataclass
 class Concert:
@@ -25,7 +30,7 @@ class Concert:
 
     def to_dict(self):
         return {
-            "artist": asdict(self.artist),
+            "artist": self.artist.to_dict(),
             "place": self.city + " " + self.place,
             "datetime": self.datetime.strftime("%d %B %Y, %H:%M"),
             "price_start": self.price_start,

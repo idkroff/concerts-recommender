@@ -1,6 +1,7 @@
 import pytest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 from aiogram.types import Message
+from app.tg_client.tg_client import TGClient
 from app.tg_client.tg_client import greet_user, process_playlist_link
 
 
