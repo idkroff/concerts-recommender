@@ -72,8 +72,10 @@ class GPTEnricher:
     def render_emoji(self, text: str) -> str:
         text = text.replace("[music_icon]", "🎶")
         text = text.replace("[date_icon]", "📅")
+        text = text.replace("[time_icon]", "📅")
         text = text.replace("[ticket_icon]", "🔖")
         text = text.replace("[place_icon]", "📍")
+        text = text.replace("[location_icon]", "📍")
         return text
 
     def remove_recommendation_labels(self, text: str) -> str:
