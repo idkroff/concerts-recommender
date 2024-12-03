@@ -49,7 +49,7 @@ async def process_playlist_link(message: Message):
     link = None
     user_input = message.text.strip()
 
-    match = re.search(r'(https?://music\.yandex\.ru/.*)', user_input)
+    match = re.search(r'(https?://music\.yandex\.ru/?[^\s]*)', user_input)
 
     if match:
         link = match.group(1)

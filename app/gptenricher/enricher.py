@@ -2,6 +2,7 @@ from yandex_cloud_ml_sdk import YCloudML
 from app.models.common import Concert
 import os
 import json
+import re
 from pathlib import Path
 
 import logging
@@ -63,6 +64,9 @@ class GPTEnricher:
         output = result[0].text
         output = self.render_emoji(output)
 
+        if user_input == "":
+            output = self.remove_recommendation_labels(output)
+
         return output
 
     def render_emoji(self, text: str) -> str:
@@ -71,6 +75,9 @@ class GPTEnricher:
         text = text.replace("[ticket_icon]", "🔖")
         text = text.replace("[place_icon]", "📍")
         return text
+
+    def remove_recommendation_labels(self, text: str) -> str:
+        return re.sub(r'\/\/ Подходит под запрос.*$', '', text)
 
     def load_json(self, path: Path):
         module_path = Path(__file__).parent
