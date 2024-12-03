@@ -1,0 +1,40 @@
+name: Deploy
+
+on:
+  workflow_dispatch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HOST: ${{ vars.DEPLOY_SSH_HOST }}
+      DEPLOY_DIRECTORY: ${{ vars.DEPLOY_DIRECTORY }}
+    
+    steps:
+      - name: Connect to VM and checkout repo
+        run: |
+          sudo apt-get install -y ssh rsync
+          echo "$DEPLOY_SSH_KEY" > deploy_key.pem
+          chmod 600 deploy_key.pem
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} << 'EOF'
+            cd ${{ env.DEPLOY_DIRECTORY }}
+            git checkout main
+            git pull
+          EOF
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+      - name: Save environment variables to .env
+        run: |
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} << 'EOF'
+            cd ${{ env.DEPLOY_DIRECTORY }}
+            echo "TG_BOT_TOKEN=${{ secrets.TG_BOT_TOKEN }}" >> .env
+            echo "YANDEX_MUSIC_TOKEN=${{ secrets.YANDEX_MUSIC_TOKEN }}" >> .env
+            echo "GPT_ENRICHER_API_TOKEN=${{ secrets.GPT_ENRICHER_API_TOKEN }}" >> .env
+            echo "SCRAPER_API_TOKEN=${{ secrets.SCRAPER_API_TOKEN }}" >> .env
+          EOF
+      - name: Remove old systemd service file
+        run: |
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "rm -f /etc/systemd/system/recommender.service"
+      - name: Run service
+        run: |
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "${{ env.DEPLOY_DIRECTORY }}/run-service.sh"
