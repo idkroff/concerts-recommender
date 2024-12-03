@@ -1,3 +1,4 @@
+import os
 from yandex_music import Client
 from yandex_music.exceptions import NotFoundError
 
@@ -5,8 +6,12 @@ from app.models.common import Artist
 
 
 class ArtistsGetter:
-    def __init__(self, token) -> None:
-        self.client: Client = Client(token)
+    def __init__(self) -> None:
+        YANDEX_MUSIC_TOKEN = os.getenv("YANDEX_MUSIC_TOKEN")
+        if not YANDEX_MUSIC_TOKEN:
+            raise ValueError("YANDEX_MUSIC_TOKEN not found in env")
+
+        self.client: Client = Client(YANDEX_MUSIC_TOKEN)
         self.client.init()
 
     def get_chart(self) -> None:

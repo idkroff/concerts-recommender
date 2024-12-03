@@ -6,7 +6,7 @@ from aiogram.types import Message
 from aiogram.filters import Command
 
 from app.artistsgetter.artists_getter import ArtistsGetter
-from app.concertsgetter.concerts_getter import *
+from app.concertsgetter.concerts_getter import ConcertsGetter
 from app.gptenricher.enricher import GPTEnricher
 from app.context import set_request_id
 
@@ -14,6 +14,10 @@ import logging
 logger = logging.getLogger(__name__)
 
 dp = Dispatcher()
+
+artists_getter = ArtistsGetter()
+concerts_getter = ConcertsGetter()
+gpt_enricher = GPTEnricher()
 
 
 @dp.message(Command("start"))
@@ -64,8 +68,8 @@ async def process_playlist_link(message: Message):
     status_message = await message.reply("Получено! 📝 Просматриваем твой плейлист...")
 
     try:
-        ag = ArtistsGetter(os.getenv("YANDEX_MUSIC_TOKEN"))
-        artists = ag.get_artists_from_playlist_by_url(playlist_url=link)
+        artists = artists_getter.get_artists_from_playlist_by_url(
+            playlist_url=link)
 
         if not artists:
             await status_message.edit_text(
@@ -75,16 +79,14 @@ async def process_playlist_link(message: Message):
 
         await status_message.edit_text("Ищу концерты исполнителей из твоего плейлиста... 🎤")
 
-        obj = ConcertsGetter(artists)
-        concerts = await obj.extract_concerts()
+        concerts = await concerts_getter.extract_concerts(artists)
 
         if concerts:
             await status_message.edit_text("Ищу подходящие для тебя варианты... 🔍")
             distribution = {
                 artist.name: artist.distribution for artist in artists}
 
-            enricher = GPTEnricher()
-            enriched_output = enricher.enrich(
+            enriched_output = gpt_enricher.enrich(
                 user_input=user_input,
                 concerts=concerts,
                 distribution=distribution
@@ -100,9 +102,8 @@ async def process_playlist_link(message: Message):
 class TGClient:
     def __init__(self):
         TG_BOT_TOKEN = os.getenv("TG_BOT_TOKEN")
-
         if not TG_BOT_TOKEN:
-            raise ValueError("TG_BOT_TOKEN не задан!")
+            raise ValueError("TG_BOT_TOKEN not found in env!")
 
         self.bot = Bot(token=TG_BOT_TOKEN)
 
