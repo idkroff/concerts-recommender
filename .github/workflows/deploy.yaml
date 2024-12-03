@@ -38,4 +38,7 @@ jobs:
           ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "sudo rm -f /etc/systemd/system/recommender.service"
       - name: Run service
         run: |
-          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} "sudo ${{ env.DEPLOY_DIRECTORY }}/run-service.sh"
+          ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }}  << 'EOF'
+            cd ${{ env.DEPLOY_DIRECTORY }}
+            "sudo ${{ env.DEPLOY_DIRECTORY }}/run-service.sh"
+          EOF
