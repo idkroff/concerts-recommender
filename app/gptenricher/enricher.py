@@ -79,7 +79,7 @@ class GPTEnricher:
         return text
 
     def remove_recommendation_labels(self, text: str) -> str:
-        return re.sub(r'\/\/ Подходит под запрос.*$', '', text)
+        return re.sub(r'\/\/ Подходит под запрос.*\n', '\n', text)
 
     def load_json(self, path: Path):
         module_path = Path(__file__).parent
