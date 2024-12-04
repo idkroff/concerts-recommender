@@ -28,6 +28,7 @@ jobs:
         run: |
           ssh -i deploy_key.pem -o StrictHostKeyChecking=no ${{ env.HOST }} << 'EOF'
             cd ${{ env.DEPLOY_DIRECTORY }}
+            sudo rm .env
             echo "TG_BOT_TOKEN=${{ secrets.TG_BOT_TOKEN }}" >> .env
             echo "YANDEX_MUSIC_TOKEN=${{ secrets.YANDEX_MUSIC_TOKEN }}" >> .env
             echo "GPT_ENRICHER_API_TOKEN=${{ secrets.GPT_ENRICHER_API_TOKEN }}" >> .env
