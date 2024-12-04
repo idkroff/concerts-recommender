@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-EnvironmentFile=/home/idkroff/recommender-stable/.env
-ExecStart=/home/idkroff/recommender-stable/run.sh
+EnvironmentFile=/opt/recommender/.env
+ExecStart=/opt/recommender/run.sh
 Restart=on-abort
 
 [Install]
