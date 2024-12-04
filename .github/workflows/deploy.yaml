@@ -31,8 +31,9 @@ jobs:
             sudo rm .env
             echo "TG_BOT_TOKEN=${{ secrets.TG_BOT_TOKEN }}" >> .env
             echo "YANDEX_MUSIC_TOKEN=${{ secrets.YANDEX_MUSIC_TOKEN }}" >> .env
-            echo "GPT_ENRICHER_API_TOKEN=${{ secrets.GPT_ENRICHER_API_TOKEN }}" >> .env
             echo "SCRAPER_API_TOKEN=${{ secrets.SCRAPER_API_TOKEN }}" >> .env
+            echo "GPT_ENRICHER_API_TOKEN=${{ secrets.GPT_ENRICHER_API_TOKEN }}" >> .env
+            echo "GPT_ENRICHER_MODEL=${{ vars.GPT_ENRICHER_MODEL }}" >> .env
           EOF
       - name: Remove old systemd service file
         run: |
