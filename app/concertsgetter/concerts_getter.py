@@ -24,6 +24,8 @@ class ConcertsGetter:
         if not (self.__q_all_concerts is None):
             self.__q_all_concerts = int(self.__q_all_concerts)
 
+        self.check_403 = False
+
     async def extract_data_from_url(self, url: str):
         try:
             scraper_url = f"http://api.scraperapi.com?api_key={
@@ -31,8 +33,11 @@ class ConcertsGetter:
             async with aiohttp.ClientSession() as session:
                 async with session.get(scraper_url) as response:
                     if response.status != 200:
+                        if response.status == 403:
+                            self.check_403 = True
                         raise Exception(f"Not OK request: url = {
                                         url}, status = {response.status}")
+
                     text = await response.text()
                     logger.debug(f"Successful request: url = {url}")
                     return text
@@ -51,6 +56,8 @@ class ConcertsGetter:
 
     async def find_concert_info(self, url: str, artist: Artist):
         text_html = await self.extract_data_from_url(url)
+        if self.check_403:
+            return
 
         try:
             soup = BeautifulSoup(text_html, "html.parser")
@@ -89,6 +96,7 @@ class ConcertsGetter:
                     "div", class_="person-schedule-place__city").text
                 concert_info.place = concert_data["location"]["name"]
                 concert_info.price_start = int(concert_data["offers"]["price"])
+                concert_info.link = concert_data["url"]
 
                 concerts.append(concert_info)
                 if not (self.__q_all_concerts is None):
@@ -140,6 +148,9 @@ class ConcertsGetter:
         tasks = [self.find_concert_info(
             urls[i][0], artists[urls[i][1]]) for i in range(len(urls))]
         results = await asyncio.gather(*tasks)
+
+        if self.check_403:
+            raise Exception("SCRAPER_API_TOKEN")
 
         concerts_list: List = list()
         for res in results:

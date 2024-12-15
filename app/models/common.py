@@ -27,6 +27,7 @@ class Concert:
     place: str = ""
     datetime: dt = field(default_factory=dt.now)
     price_start: int = 0
+    link: str = ""
 
     def to_dict(self):
         return {

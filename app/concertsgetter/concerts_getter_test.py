@@ -1,7 +1,7 @@
 import asyncio
 import pytest
 
-from app.concertsgetter.concerts_getter import ConcertsGetter
+from .concerts_getter import ConcertsGetter
 from app.models.common import Artist
 
 
