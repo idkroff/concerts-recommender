@@ -150,7 +150,7 @@ class ConcertsGetter:
         results = await asyncio.gather(*tasks)
 
         if self.check_403:
-            raise Exception("SCRAPER_API_TOKEN")
+            raise Exception("Bad SCRAPER_API_TOKEN")
 
         concerts_list: List = list()
         for res in results:
