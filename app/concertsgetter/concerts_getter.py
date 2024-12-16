@@ -24,8 +24,6 @@ class ConcertsGetter:
         if not (self.__q_all_concerts is None):
             self.__q_all_concerts = int(self.__q_all_concerts)
 
-        self.check_403 = False
-
     async def extract_data_from_url(self, url: str):
         try:
             scraper_url = f"http://api.scraperapi.com?api_key={
@@ -33,8 +31,6 @@ class ConcertsGetter:
             async with aiohttp.ClientSession() as session:
                 async with session.get(scraper_url) as response:
                     if response.status != 200:
-                        if response.status == 403:
-                            self.check_403 = True
                         raise Exception(f"Not OK request: url = {
                                         url}, status = {response.status}")
 
@@ -43,6 +39,8 @@ class ConcertsGetter:
                     return text
         except Exception as e:
             logger.error(str(e))
+            if response.status == 403:
+                raise Exception("SCRAPER_API_REQUEST_DENIED")
 
     async def get_time_for_concert(self, url: str):
         text_html = await self.extract_data_from_url(url)
@@ -56,8 +54,6 @@ class ConcertsGetter:
 
     async def find_concert_info(self, url: str, artist: Artist):
         text_html = await self.extract_data_from_url(url)
-        if self.check_403:
-            return
 
         try:
             soup = BeautifulSoup(text_html, "html.parser")
@@ -149,14 +145,15 @@ class ConcertsGetter:
             urls[i][0], artists[urls[i][1]]) for i in range(len(urls))]
         results = await asyncio.gather(*tasks)
 
-        if self.check_403:
-            raise Exception("Bad SCRAPER_API_TOKEN")
-
         concerts_list: List = list()
         for res in results:
             for el in res:
                 concerts_list.append(el)
 
         concerts_list.sort(key=lambda x: x.artist.distribution, reverse=True)
+
+        self.__q_all_concerts = os.getenv("CONCERTS_GETTER_MAX_CONCERTS_ALL")
+        if not (self.__q_all_concerts is None):
+            self.__q_all_concerts = int(self.__q_all_concerts)
 
         return concerts_list
