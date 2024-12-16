@@ -33,11 +33,14 @@ class ConcertsGetter:
                     if response.status != 200:
                         raise Exception(f"Not OK request: url = {
                                         url}, status = {response.status}")
+
                     text = await response.text()
                     logger.debug(f"Successful request: url = {url}")
                     return text
         except Exception as e:
             logger.error(str(e))
+            if response.status == 403:
+                raise Exception("SCRAPER_API_REQUEST_DENIED")
 
     async def get_time_for_concert(self, url: str):
         text_html = await self.extract_data_from_url(url)
@@ -89,6 +92,7 @@ class ConcertsGetter:
                     "div", class_="person-schedule-place__city").text
                 concert_info.place = concert_data["location"]["name"]
                 concert_info.price_start = int(concert_data["offers"]["price"])
+                concert_info.link = concert_data["url"]
 
                 concerts.append(concert_info)
                 if not (self.__q_all_concerts is None):
@@ -147,5 +151,9 @@ class ConcertsGetter:
                 concerts_list.append(el)
 
         concerts_list.sort(key=lambda x: x.artist.distribution, reverse=True)
+
+        self.__q_all_concerts = os.getenv("CONCERTS_GETTER_MAX_CONCERTS_ALL")
+        if not (self.__q_all_concerts is None):
+            self.__q_all_concerts = int(self.__q_all_concerts)
 
         return concerts_list
