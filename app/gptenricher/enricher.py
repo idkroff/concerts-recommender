@@ -64,8 +64,10 @@ class GPTEnricher:
 
         logger.debug(f"[enrich] got gpt response: {result[0].text}")
 
+        gpt_response = self.fix_gpt_response(result[0].text)
+
         output = self.render_concerts(
-            concerts, result[0].text, len(user_input.strip()) > 0)
+            concerts, gpt_response, len(user_input.strip()) > 0)
 
         return output
 
