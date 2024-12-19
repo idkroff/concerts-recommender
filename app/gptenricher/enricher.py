@@ -4,6 +4,7 @@ import os
 import json
 import re
 from pathlib import Path
+from textwrap import dedent
 
 import logging
 logger = logging.getLogger(__name__)
@@ -54,32 +55,45 @@ class GPTEnricher:
             "user_request": user_input.strip()
         }
 
+        logger.debug(f"[enrich] executing request: {request}")
+
         result = self.model.run([
             {"role": "system", "text": self.system_prompt},
             {"role": "user", "text": json.dumps(request, ensure_ascii=False)}
         ])
 
-        logger.debug(f"[enrich] executing request: {request}")
+        logger.debug(f"[enrich] got gpt response: {result[0].text}")
 
-        output = result[0].text
-        output = self.render_emoji(output)
-
-        if user_input == "":
-            output = self.remove_recommendation_labels(output)
+        output = self.render_concerts(
+            concerts, result[0].text, len(user_input.strip()) > 0)
 
         return output
 
-    def render_emoji(self, text: str) -> str:
-        text = text.replace("[music_icon]", "🎶")
-        text = text.replace("[date_icon]", "📅")
-        text = text.replace("[time_icon]", "📅")
-        text = text.replace("[ticket_icon]", "🔖")
-        text = text.replace("[place_icon]", "📍")
-        text = text.replace("[location_icon]", "📍")
-        return text
+    def render_concerts(self, concerts: list[Concert], gpt_response: str, enable_suits: bool):
+        text = ""
 
-    def remove_recommendation_labels(self, text: str) -> str:
-        return re.sub(r'\/\/ Подходит под запрос.*\n', '\n', text)
+        recommendation_data = json.loads(gpt_response)
+
+        for concert_data in recommendation_data:
+            index = concert_data["index"]
+            if index < 0 or index >= len(concerts):
+                continue
+
+            concert = concerts[index]
+
+            suits = ""
+            if enable_suits and "suits" in concert_data:
+                suits = "//" + concert_data["suits"]
+
+            text += dedent(f"""\
+                🎶 <a href=\"{concert.link}\">{concert.artist.name}</a> {suits}
+                📅 Дата: {concert.datetime.strftime("%d %B %Y, %H:%M")}
+                🔖 Билеты от {concert.price_start} руб.
+
+                📍 Место: {concert.city}, {concert.place}\n
+            """)
+
+        return text
 
     def load_json(self, path: Path):
         module_path = Path(__file__).parent
