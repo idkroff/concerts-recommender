@@ -69,6 +69,12 @@ class GPTEnricher:
 
         return output
 
+    def fix_gpt_response(self, response: str) -> str:
+        if response[-2:] == ",]":
+            response = response[:-2] + ']'
+
+        return response
+
     def render_concerts(self, concerts: list[Concert], gpt_response: str, enable_suits: bool):
         text = ""
 
