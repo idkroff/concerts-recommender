@@ -21,7 +21,7 @@ class ConcertsGetter:
             raise Exception("token not found in env SCRAPER_API_TOKEN")
 
         self.__q_all_concerts = os.getenv("CONCERTS_GETTER_MAX_CONCERTS_ALL")
-        if not (self.__q_all_concerts is None):
+        if self.__q_all_concerts is not None:
             self.__q_all_concerts = int(self.__q_all_concerts)
 
     async def extract_data_from_url(self, url: str):
@@ -70,7 +70,7 @@ class ConcertsGetter:
         for i in range(min(len(all_concerts_in_json), len(all_concerts_divs))):
             if len(concerts) >= min(int(artist.distribution * 10), 4):
                 break
-            if not (self.__q_all_concerts is None):
+            if self.__q_all_concerts is not None:
                 if self.__q_all_concerts <= 0:
                     break
 
@@ -95,7 +95,7 @@ class ConcertsGetter:
                 concert_info.link = concert_data["url"]
 
                 concerts.append(concert_info)
-                if not (self.__q_all_concerts is None):
+                if self.__q_all_concerts is not None:
                     self.__q_all_concerts -= 1
             except Exception:
                 logger.warning(f"Can't get info about a {
