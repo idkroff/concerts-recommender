@@ -4,6 +4,9 @@ from yandex_music.exceptions import NotFoundError
 
 from app.models.common import Artist
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 class ArtistsGetter:
     def __init__(self) -> None:
@@ -78,7 +81,12 @@ class ArtistsGetter:
                 )
                 )
 
-            return sorted(result_artists_list, key=lambda x: (-x.distribution, x.name))
+            artists_sorted = sorted(
+                result_artists_list, key=lambda x: (-x.distribution, x.name))
 
-        except NotFoundError as e:
+            logger.info(f"found artists: {artists_sorted}")
+
+            return artists_sorted
+
+        except NotFoundError:
             return f"Плейлист пользователя {user_id} с идентификатором {playlist_id} не найден или не является публичным"

@@ -91,7 +91,7 @@ class GPTEnricher:
 
             suits = ""
             if enable_suits and "suits" in concert_data:
-                suits = "//" + concert_data["suits"]
+                suits = "// " + concert_data["suits"]
 
             text += dedent(f"""\
                 🎶 <a href=\"{concert.link}\">{concert.artist.name}</a> {suits}
