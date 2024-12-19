@@ -91,12 +91,12 @@ async def process_playlist_link(message: Message):
                 concerts=concerts,
                 distribution=distribution
             )
-            await status_message.edit_text("Вот что мы нашли:\n\n" + enriched_output)
+            await status_message.edit_text("Вот что мы нашли:\n\n" + enriched_output, parse_mode="HTML", disable_web_page_preview=True)
         else:
             await status_message.edit_text("К сожалению, я не нашёл концертов для исполнителей из плейлиста. 😔")
     except Exception as e:
         logging.error(f"Error processing playlist link: {e}")
-        await status_message.edit_text("Произошла ошибка при обработке твоего плейлиста. Попробуй ещё раз позже.")
+        await status_message.edit_text(f"Произошла ошибка при обработке твоего плейлиста\. Попробуй ещё раз позже\.\n||Request ID: {message.message_id}||", parse_mode="MarkdownV2")
 
 
 class TGClient:
