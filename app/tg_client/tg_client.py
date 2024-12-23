@@ -25,6 +25,7 @@ async def greet_user(message: Message):
     """
     Приветствие пользователя при вводе команды /start.
     """
+
     await message.reply(
         "Привет! Я бот, который поможет тебе найти ближайшие концерты исполнителей из твоего плейлиста 🎶\n"
         "Просто отправь мне ссылку на плейлист!\n"
@@ -49,6 +50,7 @@ async def process_playlist_link(message: Message):
     """
     Обработка текстовых сообщений, содержащих ссылку на плейлист.
     """
+
     set_request_id(str(message.message_id))
     link = None
     user_input = message.text.strip()
@@ -95,8 +97,32 @@ async def process_playlist_link(message: Message):
         else:
             await status_message.edit_text("К сожалению, я не нашёл концертов для исполнителей из плейлиста. 😔")
     except Exception as e:
-        logging.error(f"Error processing playlist link: {e}")
-        await status_message.edit_text(f"Произошла ошибка при обработке твоего плейлиста\. Попробуй ещё раз позже\.\n||Request ID: {message.message_id}||", parse_mode="MarkdownV2")
+        if "SCRAPER_API_REQUEST_DENIED" in str(e):
+            logger.error(f"SCRAPER_API_REQUEST_DENIED: {e}")
+
+            notification_text = (
+                "⚠️ Произошла ошибка SCRAPER_API_REQUEST_DENIED:\n"
+                f"User ID: {message.from_user.id}\n"
+                f"Message ID: {message.message_id}\n"
+                f"Link: {link or 'None'}\n"
+                f"Error: {str(e)}"
+            )
+            try:
+                NOTIFICATION_USER_ID = os.getenv("NOTIFICATION_USER_ID")
+                await message.bot.send_message(
+                    chat_id=NOTIFICATION_USER_ID,
+                    text=notification_text
+                )
+            except Exception as notify_error:
+                logger.error(f"Не удалось отправить уведомление: {
+                             notify_error}")
+
+            await status_message.edit_text(
+                "к сожалению, сейчас мы не можем обработать ваш запрос... 😔🎶 Уже работаем над исправлением! ✨"
+            )
+        else:
+            logging.error(f"Error processing playlist link: {e}")
+            await status_message.edit_text(f"Произошла ошибка при обработке твоего плейлиста\. Попробуй ещё раз позже\.\n||Request ID: {message.message_id}||", parse_mode="MarkdownV2")
 
 
 class TGClient:
