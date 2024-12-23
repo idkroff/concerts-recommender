@@ -10,7 +10,6 @@ from app.concertsgetter.concerts_getter import ConcertsGetter
 from app.gptenricher.enricher import GPTEnricher
 from app.context import set_request_id
 
-import asyncio
 import logging
 logger = logging.getLogger(__name__)
 
@@ -26,26 +25,12 @@ async def greet_user(message: Message):
     """
     Приветствие пользователя при вводе команды /start.
     """
-    global is_active
-    is_active = True
 
     await message.reply(
         "Привет! Я бот, который поможет тебе найти ближайшие концерты исполнителей из твоего плейлиста 🎶\n"
         "Просто отправь мне ссылку на плейлист!\n"
         "Можешь также указать свои пожелания!"
     )
-
-
-@dp.message(Command("stop"))
-async def stop_bot(message: Message):
-    """
-    Завершение работы бота по команде /stop.
-    """
-
-    await message.reply("Завершаю работу... 🛑\nДля возобновления введите /start.")
-    global is_active
-    is_active = False
-    logger.info("Бот завершил работу.")
 
 
 @dp.message(Command("reqid"))
@@ -65,8 +50,6 @@ async def process_playlist_link(message: Message):
     """
     Обработка текстовых сообщений, содержащих ссылку на плейлист.
     """
-    if not is_active:
-        return
 
     set_request_id(str(message.message_id))
     link = None
@@ -149,8 +132,6 @@ class TGClient:
             raise ValueError("TG_BOT_TOKEN not found in env!")
 
         self.bot = Bot(token=TG_BOT_TOKEN)
-        global is_active
-        is_active = True
 
     async def start(self):
         try:

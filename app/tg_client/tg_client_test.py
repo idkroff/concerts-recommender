@@ -1,9 +1,8 @@
 import pytest
 from unittest.mock import AsyncMock
 from aiogram.types import Message
-from app.tg_client.tg_client import TGClient
 from app.tg_client.tg_client import greet_user, process_playlist_link
-from app.tg_client.tg_client import stop_bot, handle_reqid_command
+from app.tg_client.tg_client import handle_reqid_command
 
 
 @pytest.mark.asyncio
@@ -39,18 +38,6 @@ async def test_process_playlist_link_invalid():
     message.reply.assert_called_once_with(
         "Ой! 😬 Похоже, что с твоей ссылкой что-то не так. Убедись, что это действительная ссылка на плейлист и попробуй снова."
     )
-
-
-@pytest.mark.asyncio
-async def test_stop_bot():
-    message = AsyncMock(spec=Message)
-    message.text = "/stop"
-    message.reply = AsyncMock()
-
-    await stop_bot(message)
-
-    message.reply.assert_called_once_with(
-        "Завершаю работу... 🛑\nДля возобновления введите /start.")
 
 
 @pytest.mark.asyncio
